@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>pHMonitor — Water Quality Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-database-compat.js"></script>
+  <!-- Leaflet CSS & JS + Leaflet.heat -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700;800&display=swap');
+
+    :root {
+      --glass-bg: rgba(255, 255, 255, 0.15);
+      --glass-border: rgba(255, 255, 255, 0.3);
+      --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+      --glass-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.5);
+      --accent-primary: #0369a1;
+      --accent-secondary: #0ea5e9;
+      --text-primary: #0f172a;
+      --text-secondary: #334155;
+      --bg-start: #f0f9ff;
+      --bg-mid: #bae6fd;
+      --bg-end: #38bdf8;
+      --card-bg: rgba(255, 255, 255, 0.2);
+      --card-border: rgba(255, 255, 255, 0.4);
+      --card-hover-bg: rgba(255, 255, 255, 0.35);
+      --card-hover-border: rgba(255, 255, 255, 0.7);
+      --header-bg: rgba(255, 255, 255, 0.1);
+      --header-border: rgba(255, 255, 255, 0.25);
+      --badge-bg: rgba(14, 165, 233, 0.12);
+      --badge-border: rgba(14, 165, 233, 0.25);
+      --title-gradient: linear-gradient(135deg, #0c4a6e 0%, #0369a1 40%, #0ea5e9 100%);
+      --button-bg: linear-gradient(135deg, #0369a1, #0ea5e9);
+      --button-hover-shadow: 0 10px 30px rgba(14, 165, 233, 0.4);
+      --logout-bg: rgba(220, 38, 38, 0.15);
+      --logout-border: rgba(220, 38, 38, 0.3);
+      --logout-hover-bg: rgba(220, 38, 38, 0.25);
+      --table-header-bg: rgba(14, 165, 233, 0.12);
+      --table-border: rgba(255, 255, 255, 0.25);
+      --ph-bad-bg: rgba(220, 38, 38, 0.08);
+      --ph-warning-bg: rgba(245, 158, 11, 0.08);
+      --ph-good-bg: rgba(34, 197, 94, 0.08);
+      --transition-smooth: 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+      --transition-bounce: 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    [data-theme="dark"] {
+      --glass-bg: rgba(15, 23, 42, 0.3);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+      --glass-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+      --accent-primary: #38bdf8;
+      --accent-secondary: #7dd3fc;
+      --text-primary: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --bg-start: #0f172a;
+      --bg-mid: #1e293b;
+      --bg-end: #0c4a6e;
+      --card-bg: rgba(15, 23, 42, 0.4);
+      --card-border: rgba(255, 255, 255, 0.1);
+      --card-hover-bg: rgba(15, 23, 42, 0.55);
+      --card-hover-border: rgba(255, 255, 255, 0.18);
+      --header-bg: rgba(15, 23, 42, 0.35);
+      --header-border: rgba(255, 255, 255, 0.1);
+      --badge-bg: rgba(56, 189, 248, 0.15);
+      --badge-border: rgba(56, 189, 248, 0.25);
+      --title-gradient: linear-gradient(135deg, #7dd3fc 0%, #38bdf8 40%, #bae6fd 100%);
+      --button-bg: linear-gradient(135deg, #0369a1, #38bdf8);
+      --button-hover-shadow: 0 10px 30px rgba(56, 189, 248, 0.4);
+      --logout-bg: rgba(220, 38, 38, 0.2);
+      --logout-border: rgba(220, 38, 38, 0.4);
+      --logout-hover-bg: rgba(220, 38, 38, 0.3);
+      --table-header-bg: rgba(56, 189, 248, 0.12);
+      --table-border: rgba(255, 255, 255, 0.08);
+      --ph-bad-bg: rgba(220, 38, 38, 0.12);
+      --ph-warning-bg: rgba(245, 158, 11, 0.12);
+      --ph-good-bg: rgba(34, 197, 94, 0.12);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(160deg, var(--bg-start) 0%, var(--bg-start) 20%, var(--bg-mid) 50%, var(--bg-mid) 80%, var(--bg-end) 100%);
+      background-attachment: fixed;
+      color: var(--text-primary);
+      min-height: 100vh;
+      transition: background 0.5s ease, color 0.5s ease;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Header */
+    .header {
+      background: var(--header-bg);
+      backdrop-filter: blur(30px) saturate(180%);
+      -webkit-backdrop-filter: blur(30px) saturate(180%);
+      border-bottom: 1px solid var(--header-border);
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+      transition: all 0.5s ease;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .back-btn {
+      background: var(--glass-bg);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      border: 1px solid var(--glass-border);
+      border-radius: 50%;
+      width: 42px;
+      height: 42px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      text-decoration: none;
+      color: var(--text-primary);
+      transition: all var(--transition-smooth);
+      flex-shrink: 0;
+    }
+
+    .back-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 8px 20px rgba(14,165,233,0.2);
+    }
+
+    .header-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: var(--title-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .theme-toggle {
+      background: var(--glass-bg);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      border: 1px solid var(--glass-border);
+      border-radius: 50%;
+      width: 42px;
+      height: 42px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      transition: all var(--transition-smooth);
+      outline: none;
+      color: var(--text-primary);
+    }
+
+    .theme-toggle:hover {
+      transform: scale(1.1) rotate(15deg);
+    }
+
+    .theme-toggle .icon-sun,
+    .theme-toggle .icon-moon {
+      transition: all 0.3s ease;
+      position: absolute;
+    }
+    .theme-toggle .icon-sun { opacity: 0; transform: scale(0) rotate(-90deg); }
+    .theme-toggle .icon-moon { opacity: 1; transform: scale(1) rotate(0deg); }
+    [data-theme="dark"] .theme-toggle .icon-sun { opacity: 1; transform: scale(1) rotate(0deg); }
+    [data-theme="dark"] .theme-toggle .icon-moon { opacity: 0; transform: scale(0) rotate(90deg); }
+
+    .logout-btn {
+      background: var(--logout-bg);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      border: 1px solid var(--logout-border);
+      color: #ef4444;
+      padding: 0.55rem 1.3rem;
+      border-radius: 100px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.9rem;
+      transition: all var(--transition-smooth);
+      display: none;
+      letter-spacing: 0.02em;
+    }
+
+    .logout-btn:hover {
+      background: var(--logout-hover-bg);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(220,38,38,0.2);
+    }
+
+    /* Content */
+    .content {
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 1.5rem 2rem 3rem;
+    }
+
+    /* Action buttons */
+    .action-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      justify-content: center;
+    }
+
+    .action-btn {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 0.9rem 1.8rem;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: all var(--transition-smooth);
+      box-shadow: var(--glass-shadow), var(--glass-highlight);
+      letter-spacing: 0.02em;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .action-btn:hover {
+      background: var(--card-hover-bg);
+      border-color: var(--card-hover-border);
+      transform: translateY(-3px);
+      box-shadow: 0 16px 40px rgba(14,165,233,0.25), var(--glass-highlight);
+      color: var(--accent-primary);
+    }
+
+    .action-btn:active {
+      transform: translateY(-1px) scale(0.97);
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid var(--card-border);
+      border-radius: 28px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: var(--glass-shadow), var(--glass-highlight);
+      transition: all var(--transition-smooth);
+    }
+
+    .card:hover {
+      box-shadow: 0 16px 48px rgba(14,165,233,0.18), var(--glass-highlight);
+    }
+
+    .card-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--text-primary);
+    }
+
+    /* Table */
+    .ph-table {
+      width: 100%;
+      border-collapse: collapse;
+      border-radius: 16px;
+      overflow: hidden;
+      font-size: 0.9rem;
+    }
+
+    .ph-table th {
+      background: var(--table-header-bg);
+      color: var(--text-primary);
+      font-weight: 700;
+      padding: 1rem;
+      text-align: left;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .ph-table td {
+      padding: 0.9rem 1rem;
+      border-bottom: 1px solid var(--table-border);
+      color: var(--text-secondary);
+    }
+
+    .ph-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .ph-bad td { background: var(--ph-bad-bg); color: #dc2626; font-weight: 600; }
+    .ph-warning td { background: var(--ph-warning-bg); color: #d97706; font-weight: 600; }
+    .ph-good td { background: var(--ph-good-bg); color: #16a34a; font-weight: 600; }
+
+    .ph-badge {
+      display: inline-block;
+      padding: 0.2rem 0.7rem;
+      border-radius: 100px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .ph-badge.bad { background: #fecaca; color: #991b1b; }
+    .ph-badge.warning { background: #fef3c7; color: #92400e; }
+    .ph-badge.good { background: #dcfce7; color: #166534; }
+
+    /* Map container */
+    .map-wrapper {
+      background: var(--card-bg);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid var(--card-border);
+      border-radius: 28px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: var(--glass-shadow), var(--glass-highlight);
+    }
+
+    #map {
+      width: 100%;
+      height: 480px;
+      border-radius: 20px;
+      z-index: 1;
+      border: 2px solid var(--card-border);
+    }
+
+    .map-legend {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      margin-top: 1rem;
+      flex-wrap: wrap;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .legend-dot {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 0.4rem;
+    }
+    .legend-dot.red { background: #ef4444; }
+    .legend-dot.yellow { background: #eab308; }
+    .legend-dot.green { background: #22c55e; }
+
+    .note {
+      margin-top: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      text-align: center;
+    }
+
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 1rem 2rem;
+      color: var(--text-primary);
+      font-weight: 600;
+      font-size: 0.9rem;
+      z-index: 9999;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+      opacity: 0;
+      transform: translateX(-50%) translateY(20px);
+      transition: all 0.3s ease;
+      pointer-events: none;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Zoom to Kolkata button */
+    .zoom-kolkata-btn {
+      display: inline-block;
+      margin-top: 0.8rem;
+      font-size: 0.8rem;
+      color: var(--accent-primary);
+      cursor: pointer;
+      text-decoration: underline;
+      font-weight: 600;
+      transition: color 0.3s;
+    }
+    .zoom-kolkata-btn:hover {
+      color: var(--accent-secondary);
+    }
+
+    @media (max-width: 768px) {
+      .header {
+        padding: 0.8rem 1rem;
+      }
+      .header-title {
+        font-size: 1.2rem;
+      }
+      .content {
+        padding: 1rem;
+      }
+      #map {
+        height: 350px;
+      }
+      .ph-table {
+        font-size: 0.78rem;
+      }
+      .ph-table th, .ph-table td {
+        padding: 0.6rem 0.5rem;
+      }
+      .action-btn {
+        padding: 0.7rem 1.2rem;
+        font-size: 0.85rem;
+        flex: 1;
+        justify-content: center;
+      }
+      .card {
+        padding: 1.2rem;
+        border-radius: 22px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .header-title {
+        font-size: 1rem;
+      }
+      #map {
+        height: 280px;
+      }
+      .ph-table th, .ph-table td {
+        font-size: 0.7rem;
+        padding: 0.5rem 0.3rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <a href="index.html" class="back-btn">←</a>
+      <span class="header-title">🌊 Water Quality Dashboard</span>
+    </div>
+    <div class="header-right">
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+        <span class="icon-sun">☀️</span>
+        <span class="icon-moon">🌙</span>
+      </button>
+      <button class="logout-btn" id="logoutBtn" onclick="logout()">🚪 Logout</button>
+    </div>
+  </header>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Content -->
+  <div class="content">
+    <!-- Action buttons -->
+    <div class="action-buttons">
+      <button class="action-btn" onclick="showHeatmapSection()">📍 Show Heatmap</button>
+      <button class="action-btn" onclick="exportAffectedAreas()">📥 Export CSV</button>
+      <button class="action-btn" onclick="mailAdmin()">📧 Request Test Kit</button>
+    </div>
+
+    <!-- Awareness card -->
+    <div class="card">
+      <div class="card-title">💧 Water pH Awareness & Health Effects</div>
+      <div style="overflow-x: auto;">
+        <table class="ph-table">
+          <thead>
+            <tr>
+              <th>pH Range</th>
+              <th>Health Effects</th>
+              <th>What To Do</th>
+              <th>What Not To Do</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="ph-bad">
+              <td><span class="ph-badge bad">&lt; 6.5 Acidic</span></td>
+              <td>Corrodes pipes, stomach issues, skin irritation, metal leaching</td>
+              <td>Use filtered/bottled water. Test water. Inform authorities</td>
+              <td>Do not drink or cook. Avoid bathing if irritation occurs</td>
+            </tr>
+            <tr class="ph-good">
+              <td><span class="ph-badge good">6.5 – 8.5 Safe</span></td>
+              <td>Generally safe for drinking and daily use</td>
+              <td>Use normally. Maintain regular checks</td>
+              <td>Don't ignore sudden taste/color/smell changes</td>
+            </tr>
+            <tr class="ph-warning">
+              <td><span class="ph-badge warning">&gt; 8.5 Alkaline</span></td>
+              <td>Bitter taste, scale buildup, digestive issues, dry skin</td>
+              <td>Use filtered water. Test water. Inform authorities</td>
+              <td>Avoid long-term drinking. Not for infants/elderly</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="margin-top:1rem; font-weight:500; color: var(--text-secondary);">
+        ⚠️ <strong>Awareness:</strong> Report sudden water changes. Contact local water authority if pH is outside 6.5–8.5.
+      </p>
+    </div>
+
+    <!-- Map section -->
+    <div class="map-wrapper">
+      <div class="card-title">🗺️ Water Quality Heatmap — Kolkata Region</div>
+      <div id="map"></div>
+      <div class="map-legend">
+        <span><span class="legend-dot red"></span> Poor pH</span>
+        <span><span class="legend-dot yellow"></span> Moderate</span>
+        <span><span class="legend-dot green"></span> Safe pH</span>
+      </div>
+      <p class="note">
+        🔴 Red = poor pH (acidic/alkaline) &nbsp;|&nbsp; 🟡 Yellow = moderate &nbsp;|&nbsp; 🟢 Green = safe pH
+        <br><span class="zoom-kolkata-btn" onclick="zoomToKolkata()">📍 Click to re-center on Kolkata</span>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      // Firebase configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyCB4O8j33O3MvstmRPDxaIRA16hBLEWszA",
+        authDomain: "phmonitor-c7b10.firebaseapp.com",
+        databaseURL: "https://phmonitor-c7b10-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "phmonitor-c7b10"
+      };
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.database();
+      const auth = firebase.auth();
+
+      // Toast helper
+      function showToast(message, duration = 3000) {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), duration);
+      }
+
+      // Authentication
+      auth.onAuthStateChanged(user => {
+        const logoutBtn = document.getElementById("logoutBtn");
+        if (!user) {
+          window.location.href = "login.html";
+        } else {
+          if (logoutBtn) logoutBtn.style.display = "inline-block";
+        }
+      });
+
+      window.logout = function() {
+        auth.signOut().then(() => {
+          window.location.href = "login.html";
+        }).catch(err => console.warn("Logout error", err));
+      };
+
+      // ============ MAP: LOCKED TO KOLKATA ============
+      let map = null;
+      let heatmapLayer = null;
+      
+      // Kolkata center coordinates
+      const KOLKATA_CENTER = [22.5726, 88.3639];
+      
+      // Kolkata bounding box (South-West, North-East corners)
+      // This covers Kolkata metro area: Howrah to Salt Lake, Dum Dum to Jadavpur
+      const KOLKATA_BOUNDS = [
+        [22.35, 88.15],  // South-West (Behala/Maheshtala area)
+        [22.75, 88.55]   // North-East (Dum Dum/Salt Lake area)
+      ];
+
+      // Minimum and maximum zoom levels for Kolkata
+      const MIN_ZOOM = 10;
+      const MAX_ZOOM = 17;
+      const DEFAULT_ZOOM = 13;
+
+      function initializeLeafletMap() {
+        if (map) return;
+        
+        const mapContainer = document.getElementById('map');
+        if (!mapContainer || mapContainer.offsetHeight === 0) {
+          setTimeout(initializeLeafletMap, 200);
+          return;
+        }
+
+        // Create map centered on Kolkata
+        map = L.map('map', {
+          center: KOLKATA_CENTER,
+          zoom: DEFAULT_ZOOM,
+          zoomControl: true,
+          scrollWheelZoom: true,
+          minZoom: MIN_ZOOM,        // Prevent zooming out too far
+          maxZoom: MAX_ZOOM,
+          maxBounds: KOLKATA_BOUNDS, // LOCK the map to Kolkata area
+          maxBoundsViscosity: 1.0    // Fully solid bounds (can't drag outside)
+        });
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; CartoDB',
+          subdomains: 'abcd',
+          maxZoom: MAX_ZOOM
+        }).addTo(map);
+
+        // Kolkata center marker
+        const kolkataMarker = L.circleMarker(KOLKATA_CENTER, {
+          radius: 10,
+          fillColor: '#0ea5e9',
+          color: '#0369a1',
+          weight: 3,
+          opacity: 1,
+          fillOpacity: 0.7
+        }).addTo(map);
+        
+        kolkataMarker.bindPopup(`
+          <div style="text-align:center; font-family:'Plus Jakarta Sans',sans-serif;">
+            <b style="font-size:1.1rem;">📍 Kolkata</b><br>
+            <span style="color:#0369a1;">Water Quality Monitoring Center</span>
+          </div>
+        `);
+
+        // Add area labels
+        const landmarks = [
+          { name: 'Howrah', coords: [22.5958, 88.3106] },
+          { name: 'Salt Lake', coords: [22.5834, 88.4175] },
+          { name: 'Dum Dum', coords: [22.6335, 88.4216] },
+          { name: 'Jadavpur', coords: [22.4951, 88.3714] },
+          { name: 'New Town', coords: [22.5965, 88.4675] }
+        ];
+
+        landmarks.forEach(place => {
+          L.circleMarker(place.coords, {
+            radius: 4,
+            fillColor: '#94a3b8',
+            color: '#64748b',
+            weight: 1,
+            opacity: 0.8,
+            fillOpacity: 0.5
+          }).addTo(map).bindTooltip(place.name, {
+            permanent: false,
+            direction: 'top',
+            className: 'area-tooltip'
+          });
+        });
+
+        // Load sensor heatmap data
+        loadSensorHeatmapLeaflet();
+      }
+
+      function computeWeightFromPH(pH) {
+        const phValue = parseFloat(pH);
+        if (isNaN(phValue)) return 0.3;
+        let weight;
+        if (phValue <= 7.5) {
+          weight = (phValue - 4) / (7.5 - 4);
+        } else {
+          weight = (10 - phValue) / (10 - 7.5);
+        }
+        return Math.max(0, Math.min(1, weight));
+      }
+
+      function loadSensorHeatmapLeaflet() {
+        const sensorsRef = db.ref("sensors");
+        sensorsRef.once("value", snapshot => {
+          const data = snapshot.val();
+          
+          if (heatmapLayer && map) {
+            map.removeLayer(heatmapLayer);
+            heatmapLayer = null;
+          }
+
+          if (!data) {
+            // No data, just show Kolkata area
+            map.setView(KOLKATA_CENTER, DEFAULT_ZOOM);
+            showToast("No sensor data found. Showing Kolkata monitoring area.");
+            return;
+          }
+
+          const heatArray = [];
+          let kolkataAreaPoints = 0;
+
+          Object.entries(data).forEach(([key, sensor]) => {
+            const lat = parseFloat(sensor.latitude);
+            const lng = parseFloat(sensor.longitude);
+            const pH = parseFloat(sensor.ph);
+            
+            if (isNaN(lat) || isNaN(lng)) return;
+
+            // Check if point is within Kolkata bounds
+            if (lat >= KOLKATA_BOUNDS[0][0] && lat <= KOLKATA_BOUNDS[1][0] &&
+                lng >= KOLKATA_BOUNDS[0][1] && lng <= KOLKATA_BOUNDS[1][1]) {
+              kolkataAreaPoints++;
+            }
+
+            const weight = computeWeightFromPH(pH);
+            heatArray.push([lat, lng, weight]);
+          });
+
+          if (heatArray.length === 0) {
+            map.setView(KOLKATA_CENTER, DEFAULT_ZOOM);
+            showToast("No valid sensor coordinates found.");
+            return;
+          }
+
+          // Create heatmap
+          heatmapLayer = L.heatLayer(heatArray, {
+            radius: 30,
+            blur: 18,
+            maxZoom: MAX_ZOOM,
+            max: 1.0,
+            gradient: {
+              0.0: '#ef4444',
+              0.5: '#eab308',
+              1.0: '#22c55e'
+            },
+            minOpacity: 0.25
+          }).addTo(map);
+
+          // IMPORTANT: Do NOT call fitBounds here!
+          // Keep the view on Kolkata, don't auto-zoom out
+          // Only set the view if it hasn't been set yet
+          if (map.getZoom() < MIN_ZOOM || map.getZoom() > MAX_ZOOM) {
+            map.setView(KOLKATA_CENTER, DEFAULT_ZOOM);
+          }
+
+          // Show info toast
+          const totalPoints = heatArray.length;
+          showToast(`📍 ${totalPoints} sensor points loaded | ${kolkataAreaPoints} in Kolkata area`, 4000);
+          
+        }).catch(err => {
+          console.error("Firebase read error:", err);
+          showToast("Error loading sensor data.");
+          map.setView(KOLKATA_CENTER, DEFAULT_ZOOM);
+        });
+      }
+
+      // Zoom to Kolkata function
+      window.zoomToKolkata = function() {
+        if (map) {
+          map.setView(KOLKATA_CENTER, DEFAULT_ZOOM, {
+            animate: true,
+            duration: 1
+          });
+          showToast("📍 Centered on Kolkata");
+        }
+      };
+
+      window.showHeatmapSection = function() {
+        const mapElement = document.getElementById('map');
+        if (mapElement) {
+          mapElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        if (map) {
+          setTimeout(() => { 
+            map.invalidateSize();
+            // Don't reload data, just refresh view
+            map.setView(KOLKATA_CENTER, DEFAULT_ZOOM);
+          }, 400);
+        } else {
+          initializeLeafletMap();
+        }
+      };
+
+      // Export CSV
+      window.exportAffectedAreas = function() {
+        const ref = db.ref("sensors");
+        ref.once("value", snapshot => {
+          const data = snapshot.val();
+          if (!data) {
+            showToast("No sensor data to export.");
+            return;
+          }
+          let csv = "Latitude,Longitude,pH,Status,Location\n";
+          Object.values(data).forEach(sensor => {
+            const lat = sensor.latitude || "";
+            const lng = sensor.longitude || "";
+            const ph = sensor.ph || "";
+            let status = "Unknown";
+            if (ph) {
+              const phVal = parseFloat(ph);
+              if (phVal < 6.5) status = "Acidic";
+              else if (phVal > 8.5) status = "Alkaline";
+              else status = "Safe";
+            }
+            // Check if in Kolkata area
+            let location = "Outside Kolkata";
+            if (lat && lng && 
+                parseFloat(lat) >= KOLKATA_BOUNDS[0][0] && parseFloat(lat) <= KOLKATA_BOUNDS[1][0] &&
+                parseFloat(lng) >= KOLKATA_BOUNDS[0][1] && parseFloat(lng) <= KOLKATA_BOUNDS[1][1]) {
+              location = "Kolkata Metro Area";
+            }
+            csv += `${lat},${lng},${ph},${status},${location}\n`;
+          });
+          
+          const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "kolkata_water_quality_data.csv";
+          a.style.display = "none";
+          document.body.appendChild(a);
+          a.click();
+          
+          setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          }, 100);
+          
+          showToast("✅ CSV exported successfully!");
+        }).catch(err => {
+                   showToast("❌ Export failed: " + err.message);
+        });
+      };
+
+      // Mail admin
+      window.mailAdmin = function() {
+        const email = "dmanishkumar093@gmail.com";
+        const subject = encodeURIComponent("Request for Water Test Kit - Kolkata");
+        const body = encodeURIComponent(
+          "I would like to request a water test kit for my area in Kolkata.\n\n" +
+          "Please contact me with further details.\n\n" +
+          "Thank you."
+        );
+        
+        const mailtoUrl = `mailto:${email}?subject=${subject}&body=${body}`;
+        const startTime = Date.now();
+        window.location.href = mailtoUrl;
+        
+        setTimeout(() => {
+          if (Date.now() - startTime < 1500) {
+            showToast("📧 Email: " + email, 5000);
+            const newWindow = window.open(mailtoUrl, '_blank');
+            if (!newWindow) {
+              navigator.clipboard?.writeText(email).then(() => {
+                showToast("📋 Email copied: " + email, 4000);
+              }).catch(() => {});
+            }
+          }
+        }, 800);
+      };
+
+      // Initialize
+      window.addEventListener('load', function() {
+        setTimeout(initializeLeafletMap, 300);
+      });
+
+      window.addEventListener('resize', function() {
+        if (map) {
+          setTimeout(() => map.invalidateSize(), 200);
+        }
+      });
+
+      // Theme toggle
+      window.toggleTheme = function() {
+        const html = document.documentElement;
+        const currentTheme = html.getAttribute('data-theme');
+        if (currentTheme === 'dark') {
+          html.removeAttribute('data-theme');
+          localStorage.setItem('theme', 'light');
+        } else {
+          html.setAttribute('data-theme', 'dark');
+          localStorage.setItem('theme', 'dark');
+        }
+      };
+
+      (function() {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      })();
+    })();
+  </script>
+</body>
+</html>

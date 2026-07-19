@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>pHMonitor — Upload Sensor Data</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700;800&display=swap');
+
+    :root {
+      --glass-bg: rgba(255, 255, 255, 0.15);
+      --glass-border: rgba(255, 255, 255, 0.3);
+      --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+      --glass-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.5);
+      --accent-primary: #0369a1;
+      --accent-secondary: #0ea5e9;
+      --text-primary: #0f172a;
+      --text-secondary: #334155;
+      --bg-start: #f0f9ff;
+      --bg-mid: #bae6fd;
+      --bg-end: #38bdf8;
+      --card-bg: rgba(255, 255, 255, 0.2);
+      --card-border: rgba(255, 255, 255, 0.4);
+      --input-bg: rgba(255, 255, 255, 0.2);
+      --input-border: rgba(255, 255, 255, 0.4);
+      --input-focus-border: rgba(14, 165, 233, 0.6);
+      --input-focus-shadow: 0 0 20px rgba(14, 165, 233, 0.2);
+      --title-gradient: linear-gradient(135deg, #0c4a6e 0%, #0369a1 40%, #0ea5e9 100%);
+      --button-bg: linear-gradient(135deg, #0369a1, #0ea5e9);
+      --button-hover-shadow: 0 10px 30px rgba(14, 165, 233, 0.4);
+      --success-bg: rgba(34, 197, 94, 0.1);
+      --error-bg: rgba(220, 38, 38, 0.1);
+      --header-bg: rgba(255, 255, 255, 0.1);
+      --header-border: rgba(255, 255, 255, 0.25);
+      --transition-smooth: 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+      --transition-bounce: 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    [data-theme="dark"] {
+      --glass-bg: rgba(15, 23, 42, 0.3);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+      --glass-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+      --accent-primary: #38bdf8;
+      --accent-secondary: #7dd3fc;
+      --text-primary: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --bg-start: #0f172a;
+      --bg-mid: #1e293b;
+      --bg-end: #0c4a6e;
+      --card-bg: rgba(15, 23, 42, 0.4);
+      --card-border: rgba(255, 255, 255, 0.1);
+      --input-bg: rgba(15, 23, 42, 0.4);
+      --input-border: rgba(255, 255, 255, 0.1);
+      --input-focus-border: rgba(56, 189, 248, 0.5);
+      --input-focus-shadow: 0 0 20px rgba(56, 189, 248, 0.15);
+      --title-gradient: linear-gradient(135deg, #7dd3fc 0%, #38bdf8 40%, #bae6fd 100%);
+      --button-bg: linear-gradient(135deg, #0369a1, #38bdf8);
+      --button-hover-shadow: 0 10px 30px rgba(56, 189, 248, 0.4);
+      --success-bg: rgba(34, 197, 94, 0.15);
+      --error-bg: rgba(220, 38, 38, 0.15);
+      --header-bg: rgba(15, 23, 42, 0.35);
+      --header-border: rgba(255, 255, 255, 0.1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(160deg, var(--bg-start) 0%, var(--bg-start) 20%, var(--bg-mid) 50%, var(--bg-mid) 80%, var(--bg-end) 100%);
+      background-attachment: fixed;
+      color: var(--text-primary);
+      min-height: 100vh;
+      transition: background 0.5s ease, color 0.5s ease;
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    .header {
+      background: var(--header-bg);
+      backdrop-filter: blur(30px) saturate(180%);
+      -webkit-backdrop-filter: blur(30px) saturate(180%);
+      border-bottom: 1px solid var(--header-border);
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+      transition: all 0.5s ease;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .back-btn {
+      background: var(--glass-bg);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      border: 1px solid var(--glass-border);
+      border-radius: 50%;
+      width: 42px;
+      height: 42px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      text-decoration: none;
+      color: var(--text-primary);
+      transition: all var(--transition-smooth);
+      flex-shrink: 0;
+    }
+
+    .back-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 8px 20px rgba(14,165,233,0.2);
+    }
+
+    .header-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: var(--title-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .theme-toggle {
+      background: var(--glass-bg);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      border: 1px solid var(--glass-border);
+      border-radius: 50%;
+      width: 42px;
+      height: 42px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      transition: all var(--transition-smooth);
+      outline: none;
+      color: var(--text-primary);
+    }
+
+    .theme-toggle:hover {
+      transform: scale(1.1) rotate(15deg);
+    }
+
+    .theme-toggle .icon-sun,
+    .theme-toggle .icon-moon {
+      transition: all 0.3s ease;
+      position: absolute;
+    }
+    .theme-toggle .icon-sun { opacity: 0; transform: scale(0) rotate(-90deg); }
+    .theme-toggle .icon-moon { opacity: 1; transform: scale(1) rotate(0deg); }
+    [data-theme="dark"] .theme-toggle .icon-sun { opacity: 1; transform: scale(1) rotate(0deg); }
+    [data-theme="dark"] .theme-toggle .icon-moon { opacity: 0; transform: scale(0) rotate(90deg); }
+
+    /* Content */
+    .content {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 2rem 1rem 3rem;
+    }
+
+    /* Form card */
+    .form-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid var(--card-border);
+      border-radius: 28px;
+      padding: 2.5rem;
+      width: 100%;
+      max-width: 520px;
+      box-shadow: var(--glass-shadow), var(--glass-highlight);
+      transition: all var(--transition-smooth);
+      animation: fadeInUp 0.6s ease-out;
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .form-card:hover {
+      box-shadow: 0 16px 48px rgba(14,165,233,0.18), var(--glass-highlight);
+    }
+
+    .form-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .form-icon {
+      font-size: 3rem;
+      margin-bottom: 0.5rem;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    .form-title {
+      font-size: 1.7rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.3rem;
+      background: var(--title-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .form-subtitle {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      font-weight: 400;
+    }
+
+    /* Form groups */
+    .form-group {
+      margin-bottom: 1.2rem;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 0.4rem;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .input-wrapper {
+      position: relative;
+    }
+
+    .input-icon {
+      position: absolute;
+      left: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1.1rem;
+      opacity: 0.5;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 0.85rem 1rem 0.85rem 2.8rem;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: var(--text-primary);
+      background: var(--input-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--input-border);
+      border-radius: 14px;
+      outline: none;
+      transition: all var(--transition-smooth);
+      letter-spacing: 0.01em;
+    }
+
+    .form-input::placeholder {
+      color: var(--text-secondary);
+      opacity: 0.5;
+      font-weight: 400;
+    }
+
+    .form-input:focus {
+      border-color: var(--input-focus-border);
+      box-shadow: var(--input-focus-shadow), var(--glass-highlight);
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .form-input:focus ~ .input-icon {
+      opacity: 0.8;
+    }
+
+    /* Row layout */
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    /* Location detect button */
+    .detect-btn {
+      width: 100%;
+      padding: 0.7rem;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--accent-primary);
+      background: var(--input-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 2px dashed var(--input-border);
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all var(--transition-smooth);
+      letter-spacing: 0.02em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .detect-btn:hover {
+      border-color: var(--accent-secondary);
+      background: rgba(255, 255, 255, 0.25);
+      transform: translateY(-2px);
+    }
+
+    .detect-btn.success {
+      border-color: #22c55e;
+      border-style: solid;
+      color: #16a34a;
+      background: rgba(34, 197, 94, 0.1);
+    }
+
+    /* Submit button */
+    .submit-btn {
+      width: 100%;
+      padding: 1rem;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: white;
+      background: var(--button-bg);
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: all var(--transition-bounce);
+      box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3);
+      margin-top: 1rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .submit-btn::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      transition: left 0.7s ease;
+    }
+
+    .submit-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--button-hover-shadow);
+    }
+
+    .submit-btn:hover::after {
+      left: 100%;
+    }
+
+    .submit-btn:active {
+      transform: translateY(-1px) scale(0.98);
+    }
+
+    .submit-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    /* Status message */
+    .status-msg {
+      margin-top: 1rem;
+      padding: 0.8rem 1.2rem;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-align: center;
+      display: none;
+      animation: fadeInUp 0.3s ease;
+    }
+
+    .status-msg.show {
+      display: block;
+    }
+
+    .status-msg.success {
+      background: var(--success-bg);
+      color: #16a34a;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+
+    .status-msg.error {
+      background: var(--error-bg);
+      color: #dc2626;
+      border: 1px solid rgba(220, 38, 38, 0.3);
+    }
+
+    /* Recent uploads list */
+    .recent-section {
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--input-border);
+    }
+
+    .recent-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-secondary);
+      margin-bottom: 0.8rem;
+    }
+
+    .recent-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--input-border);
+    }
+
+    .recent-item:last-child {
+      border-bottom: none;
+    }
+
+    .recent-item .loc {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .recent-item .ph-val {
+      font-weight: 700;
+      padding: 0.15rem 0.6rem;
+      border-radius: 100px;
+      font-size: 0.75rem;
+    }
+    .ph-val.good { background: rgba(34,197,94,0.15); color: #16a34a; }
+    .ph-val.warning { background: rgba(245,158,11,0.15); color: #d97706; }
+    .ph-val.bad { background: rgba(220,38,38,0.15); color: #dc2626; }
+
+    @media (max-width: 600px) {
+      .header { padding: 0.8rem 1rem; }
+      .header-title { font-size: 1.1rem; }
+      .content { padding: 1rem; }
+      .form-card { padding: 1.5rem; border-radius: 22px; }
+      .form-title { font-size: 1.3rem; }
+      .form-row { grid-template-columns: 1fr; }
+      .form-input { padding: 0.75rem 0.75rem 0.75rem 2.5rem; font-size: 0.9rem; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <a href="admin.html" class="back-btn">←</a>
+      <span class="header-title">📤 Upload Sensor Data</span>
+    </div>
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+      <span class="icon-sun">☀️</span>
+      <span class="icon-moon">🌙</span>
+    </button>
+  </header>
+
+  <!-- Content -->
+  <div class="content">
+    <div class="form-card">
+      <div class="form-header">
+        <div class="form-icon">📡</div>
+        <h1 class="form-title">Sensor Data Entry</h1>
+        <p class="form-subtitle">Upload water quality readings from IoT sensors</p>
+      </div>
+
+      <form id="uploadForm" onsubmit="event.preventDefault(); uploadData();">
+        <!-- Location name -->
+        <div class="form-group">
+          <label class="form-label" for="location">Location Name</label>
+          <div class="input-wrapper">
+            <span class="input-icon">📍</span>
+            <input type="text" id="location" class="form-input" placeholder="e.g., Kolkata - Salt Lake Sector V" required>
+          </div>
+        </div>
+
+        <!-- GPS detect button -->
+        <div class="form-group">
+          <label class="form-label">Coordinates</label>
+          <button type="button" class="detect-btn" id="detectBtn" onclick="detectLocation()">
+            📡 Auto-Detect My Location
+          </button>
+          <div class="form-row">
+            <div class="input-wrapper">
+              <span class="input-icon">🌐</span>
+              <input type="number" id="latitude" class="form-input" placeholder="Latitude" required step="any">
+            </div>
+            <div class="input-wrapper">
+              <span class="input-icon">🌐</span>
+              <input type="number" id="longitude" class="form-input" placeholder="Longitude" required step="any">
+            </div>
+          </div>
+        </div>
+
+        <!-- Water quality -->
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="ph">pH Level</label>
+            <div class="input-wrapper">
+              <span class="input-icon">💧</span>
+              <input type="number" id="ph" class="form-input" placeholder="e.g., 7.2" required step="any" min="0" max="14">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="tds">TDS (ppm)</label>
+            <div class="input-wrapper">
+              <span class="input-icon">🔬</span>
+              <input type="number" id="tds" class="form-input" placeholder="e.g., 250" required>
+            </div>
+          </div>
+        </div>
+
+        <!-- Temperature -->
+        <div class="form-group">
+          <label class="form-label" for="temperature">Temperature</label>
+          <div class="input-wrapper">
+            <span class="input-icon">🌡️</span>
+            <input type="number" id="temperature" class="form-input" placeholder="e.g., 28.5 °C" required step="any">
+          </div>
+        </div>
+
+        <!-- Submit -->
+        <button type="submit" class="submit-btn" id="submitBtn">
+          📤 Upload Sensor Data
+        </button>
+
+        <div class="status-msg" id="statusMsg"></div>
+      </form>
+
+      <!-- Recent uploads -->
+      <div class="recent-section" id="recentSection" style="display:none;">
+        <div class="recent-title">📋 Recent Uploads</div>
+        <div id="recentList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCB4O8j33O3MvstmRPDxaIRA16hBLEWszA",
+      authDomain: "phmonitor-c7b10.firebaseapp.com",
+      databaseURL: "https://phmonitor-c7b10-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "phmonitor-c7b10",
+      storageBucket: "phmonitor-c7b10.appspot.com",
+      messagingSenderId: "939761163717",
+      appId: "1:939761163717:web:0f3d2428af1359b21fbfac"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Show status
+    function showStatus(message, type) {
+      const msg = document.getElementById('statusMsg');
+      msg.textContent = message;
+      msg.className = 'status-msg show ' + type;
+      setTimeout(() => msg.classList.remove('show'), 4000);
+    }
+
+    // Auto-detect location
+    function detectLocation() {
+      const btn = document.getElementById('detectBtn');
+      
+      if (!navigator.geolocation) {
+        showStatus('❌ Geolocation not supported by your browser.', 'error');
+        return;
+      }
+
+      btn.textContent = '⏳ Detecting...';
+      btn.style.pointerEvents = 'none';
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          
+          document.getElementById('latitude').value = lat.toFixed(6);
+          document.getElementById('longitude').value = lng.toFixed(6);
+          
+          btn.textContent = '✅ Location Detected!';
+          btn.classList.add('success');
+          btn.style.pointerEvents = 'auto';
+          
+          showStatus('📍 Coordinates filled automatically!', 'success');
+        },
+        (error) => {
+          btn.textContent = '📡 Auto-Detect My Location';
+          btn.style.pointerEvents = 'auto';
+          
+          let msg = '❌ Unable to get location.';
+          if (error.code === error.PERMISSION_DENIED) msg = '❌ Location permission denied.';
+          else if (error.code === error.TIMEOUT) msg = '⏰ Location request timed out.';
+          
+          showStatus(msg, 'error');
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    }
+
+    // Upload data
+    function uploadData() {
+      const location = document.getElementById("location").value.trim();
+      const latitude = document.getElementById("latitude").value;
+      const longitude = document.getElementById("longitude").value;
+      const ph = document.getElementById("ph").value;
+      const tds = document.getElementById("tds").value;
+      const temperature = document.getElementById("temperature").value;
+      const submitBtn = document.getElementById("submitBtn");
+
+      if (!location || !latitude || !longitude || !ph || !tds || !temperature) {
+        showStatus("⚠️ Please fill in all fields.", "error");
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = '⏳ Uploading...';
+
+      const sensorKey = location.replace(/[.#$/\[\]]/g, '_');
+      
+      const data = {
+        location: location,
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude),
+        ph: parseFloat(ph),
+        tds: parseInt(tds),
+        temperature: parseFloat(temperature),
+        timestamp: new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })
+      };
+
+      db.ref("sensors/" + sensorKey).set(data)
+        .then(() => {
+          showStatus("✅ Sensor data uploaded successfully!", "success");
+          
+          // Reset form
+          document.getElementById("uploadForm").reset();
+          const btn = document.getElementById('detectBtn');
+          btn.textContent = '📡 Auto-Detect My Location';
+          btn.classList.remove('success');
+          
+          submitBtn.disabled = false;
+          submitBtn.textContent = '📤 Upload Sensor Data';
+          
+          // Load recent uploads
+          loadRecentUploads();
+        })
+        .catch((error) => {
+          showStatus("❌ Error: " + error.message, "error");
+          submitBtn.disabled = false;
+          submitBtn.textContent = '📤 Upload Sensor Data';
+        });
+    }
+
+    // Load recent uploads
+    function loadRecentUploads() {
+      db.ref("sensors").orderByChild("timestamp").limitToLast(5).once("value", snapshot => {
+        const data = snapshot.val();
+        const recentSection = document.getElementById('recentSection');
+        const recentList = document.getElementById('recentList');
+        
+        if (!data) {
+          recentSection.style.display = 'none';
+          return;
+        }
+
+        recentSection.style.display = 'block';
+        recentList.innerHTML = '';
+
+        const entries = Object.entries(data).reverse();
+        entries.forEach(([key, sensor]) => {
+          const phVal = parseFloat(sensor.ph);
+          let phClass = 'good';
+          if (phVal < 6.5) phClass = 'bad';
+          else if (phVal > 8.5) phClass = 'warning';
+
+          const item = document.createElement('div');
+          item.className = 'recent-item';
+          item.innerHTML = `
+            <span>
+              <span class="loc">📍 ${sensor.location || key}</span>
+              <span style="font-size:0.75rem; opacity:0.6;"> — ${sensor.timestamp || 'Just now'}</span>
+            </span>
+            <span class="ph-val ${phClass}">pH ${sensor.ph}</span>
+          `;
+          recentList.appendChild(item);
+        });
+      });
+    }
+
+    // Theme toggle
+    function toggleTheme() {
+      const html = document.documentElement;
+      const currentTheme = html.getAttribute('data-theme');
+      if (currentTheme === 'dark') {
+        html.removeAttribute('data-theme');
+        localStorage.setItem('theme', 'light');
+      } else {
+        html.setAttribute('data-theme', 'dark');
+        localStorage.setItem('theme', 'dark');
+      }
+    }
+
+    // Init
+    (function() {
+      if (localStorage.getItem('theme') === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+      loadRecentUploads();
+    })();
+  </script>
+</body>
+</html>

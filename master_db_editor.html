@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Master Database Editor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-database-compat.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f6fbff;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+    header {
+      background: #26334d;
+      color: #fff;
+      padding: 1.5rem 1rem 1rem 1rem;
+      text-align: center;
+      box-shadow: 0 2px 8px #0002;
+    }
+    h1 {
+      margin: 0;
+      font-size: 2rem;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 2rem auto;
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 2px 16px #b5e3f766;
+      padding: 2rem;
+    }
+    .section-title {
+      color: #0077b6;
+      font-size: 1.2rem;
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+      border-left: 5px solid #0077b6;
+      padding-left: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 2rem;
+      background: #f6fbff;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px #b5e3f744;
+    }
+    th, td {
+      padding: 0.7rem 0.5rem;
+      border-bottom: 1px solid #e0e7ef;
+      text-align: left;
+      font-size: 1rem;
+    }
+    th {
+      background: #e0f2f1;
+      color: #26334d;
+      font-weight: 700;
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    .edit-btn, .delete-btn, .save-btn, .cancel-btn {
+      border: none;
+      border-radius: 6px;
+      padding: 0.4rem 1rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-right: 0.3rem;
+      margin-bottom: 0.2rem;
+      transition: background 0.2s;
+    }
+    .edit-btn { background: #0077b6; color: #fff; }
+    .edit-btn:hover { background: #005b8a; }
+    .delete-btn { background: #d32f2f; color: #fff; }
+    .delete-btn:hover { background: #a31515; }
+    .save-btn { background: #43a047; color: #fff; }
+    .save-btn:hover { background: #2e7031; }
+    .cancel-btn { background: #bdbdbd; color: #26334d; }
+    .cancel-btn:hover { background: #757575; color: #fff; }
+    .add-form {
+      margin-bottom: 2rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: flex-end;
+    }
+    .add-form label {
+      font-weight: 600;
+      color: #1a2233;
+      margin-right: 0.5rem;
+    }
+    .add-form input, .add-form select {
+      padding: 0.5rem;
+      border-radius: 6px;
+      border: 1.5px solid #b5e3f7;
+      font-size: 1rem;
+      margin-right: 1rem;
+    }
+    .add-btn {
+      background: linear-gradient(90deg, #0077b6 30%, #48cae4 70%);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 0.7rem 1.5rem;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .add-btn:hover {
+      background: linear-gradient(90deg, #48cae4 10%, #0077b6 90%);
+    }
+    @media (max-width: 700px) {
+      .container { padding: 1rem; }
+      table, th, td { font-size: 0.95rem; }
+      .add-form { flex-direction: column; align-items: stretch; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Master Database Editor</h1>
+    <p style="font-size:1rem;margin-top:0.5rem;">Edit, add, or delete any data in sensors, reports, or complaints.</p>
+  </header>
+  <div class="container">
+    <div class="section-title">Sensors</div>
+    <form class="add-form" id="addSensorForm">
+      <label>Lat: <input type="number" step="any" name="latitude" required></label>
+      <label>Lng: <input type="number" step="any" name="longitude" required></label>
+      <label>pH: <input type="number" step="any" name="ph" min="0" max="14" required></label>
+      <label>TDS: <input type="number" step="any" name="tds"></label>
+      <button type="submit" class="add-btn">Add Sensor</button>
+    </form>
+    <table id="sensorsTable">
+      <thead>
+        <tr>
+          <th>Latitude</th><th>Longitude</th><th>pH</th><th>TDS</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div class="section-title">Reports</div>
+    <table id="reportsTable">
+      <thead>
+        <tr>
+          <th>Lat</th><th>Lng</th><th>Comment</th><th>Guess</th><th>Status</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div class="section-title">Complaints</div>
+    <table id="complaintsTable">
+      <thead>
+        <tr>
+          <th>Name</th><th>Location</th><th>Lat</th><th>Lng</th><th>pH</th><th>TDS</th><th>Issue</th><th>Description</th><th>Status</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <script>
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCB4O8j33O3MvstmRPDxaIRA16hBLEWszA",
+      authDomain: "phmonitor-c7b10.firebaseapp.com",
+      databaseURL: "https://phmonitor-c7b10-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "phmonitor-c7b10"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // --- SENSORS ---
+    function loadSensors() {
+      db.ref("sensors").on("value", snap => {
+        const tbody = document.querySelector("#sensorsTable tbody");
+        tbody.innerHTML = "";
+        const data = snap.val();
+        if (!data) return;
+        Object.entries(data).forEach(([key, s]) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td><span class="sensor-lat">${s.latitude}</span></td>
+            <td><span class="sensor-lng">${s.longitude}</span></td>
+            <td><span class="sensor-ph">${s.ph}</span></td>
+            <td><span class="sensor-tds">${s.tds ?? ""}</span></td>
+            <td>
+              <button class="edit-btn" onclick="editSensor('${key}', this)">Edit</button>
+              <button class="delete-btn" onclick="deleteSensor('${key}')">Delete</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      });
+    }
+    function editSensor(key, btn) {
+      const tr = btn.closest("tr");
+      const lat = tr.querySelector(".sensor-lat").textContent;
+      const lng = tr.querySelector(".sensor-lng").textContent;
+      const ph = tr.querySelector(".sensor-ph").textContent;
+      const tds = tr.querySelector(".sensor-tds").textContent;
+      tr.innerHTML = `
+        <td><input type="number" step="any" value="${lat}" class="edit-lat"></td>
+        <td><input type="number" step="any" value="${lng}" class="edit-lng"></td>
+        <td><input type="number" step="any" value="${ph}" class="edit-ph"></td>
+        <td><input type="number" step="any" value="${tds}" class="edit-tds"></td>
+        <td>
+          <button class="save-btn" onclick="saveSensor('${key}', this)">Save</button>
+          <button class="cancel-btn" onclick="loadSensors()">Cancel</button>
+        </td>
+      `;
+    }
+    function saveSensor(key, btn) {
+      const tr = btn.closest("tr");
+      const latitude = parseFloat(tr.querySelector(".edit-lat").value);
+      const longitude = parseFloat(tr.querySelector(".edit-lng").value);
+      const ph = parseFloat(tr.querySelector(".edit-ph").value);
+      const tds = tr.querySelector(".edit-tds").value ? parseFloat(tr.querySelector(".edit-tds").value) : null;
+      db.ref("sensors/" + key).update({ latitude, longitude, ph, tds });
+      loadSensors();
+    }
+    function deleteSensor(key) {
+      if (confirm("Delete this sensor?")) db.ref("sensors/" + key).remove();
+    }
+    document.getElementById("addSensorForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const f = e.target;
+      const latitude = parseFloat(f.latitude.value);
+      const longitude = parseFloat(f.longitude.value);
+      const ph = parseFloat(f.ph.value);
+      const tds = f.tds.value ? parseFloat(f.tds.value) : null;
+      db.ref("sensors").push({ latitude, longitude, ph, tds });
+      f.reset();
+    });
+
+    // --- REPORTS ---
+    function loadReports() {
+      db.ref("reports").on("value", snap => {
+        const tbody = document.querySelector("#reportsTable tbody");
+        tbody.innerHTML = "";
+        const data = snap.val();
+        if (!data) return;
+        Object.entries(data).forEach(([key, r]) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td><span class="report-lat">${r.lat ?? ""}</span></td>
+            <td><span class="report-lng">${r.lng ?? ""}</span></td>
+            <td><span class="report-comment">${r.comment ?? ""}</span></td>
+            <td><span class="report-guess">${r.guessed ?? ""}</span></td>
+            <td><span class="report-status">${r.status ?? ""}</span></td>
+            <td>
+              <button class="edit-btn" onclick="editReport('${key}', this)">Edit</button>
+              <button class="delete-btn" onclick="deleteReport('${key}')">Delete</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      });
+    }
+    function editReport(key, btn) {
+      const tr = btn.closest("tr");
+      const lat = tr.querySelector(".report-lat").textContent;
+      const lng = tr.querySelector(".report-lng").textContent;
+      const comment = tr.querySelector(".report-comment").textContent;
+      const guessed = tr.querySelector(".report-guess").textContent;
+      const status = tr.querySelector(".report-status").textContent;
+      tr.innerHTML = `
+        <td><input type="number" step="any" value="${lat}" class="edit-lat"></td>
+        <td><input type="number" step="any" value="${lng}" class="edit-lng"></td>
+        <td><input type="text" value="${comment}" class="edit-comment"></td>
+        <td><input type="text" value="${guessed}" class="edit-guess"></td>
+        <td>
+          <select class="edit-status">
+            <option value="pending" ${status === "pending" ? "selected" : ""}>pending</option>
+            <option value="verified" ${status === "verified" ? "selected" : ""}>verified</option>
+            <option value="unverified" ${status === "unverified" ? "selected" : ""}>unverified</option>
+          </select>
+        </td>
+        <td>
+          <button class="save-btn" onclick="saveReport('${key}', this)">Save</button>
+          <button class="cancel-btn" onclick="loadReports()">Cancel</button>
+        </td>
+      `;
+    }
+    function saveReport(key, btn) {
+      const tr = btn.closest("tr");
+      const lat = parseFloat(tr.querySelector(".edit-lat").value);
+      const lng = parseFloat(tr.querySelector(".edit-lng").value);
+      const comment = tr.querySelector(".edit-comment").value;
+      const guessed = tr.querySelector(".edit-guess").value;
+      const status = tr.querySelector(".edit-status").value;
+      db.ref("reports/" + key).update({ lat, lng, comment, guessed, status });
+      loadReports();
+    }
+    function deleteReport(key) {
+      if (confirm("Delete this report?")) db.ref("reports/" + key).remove();
+    }
+
+    // --- COMPLAINTS ---
+    function loadComplaints() {
+      db.ref("complaints").on("value", snap => {
+        const tbody = document.querySelector("#complaintsTable tbody");
+        tbody.innerHTML = "";
+        const data = snap.val();
+        if (!data) return;
+        Object.entries(data).forEach(([key, c]) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td><span class="complaint-name">${c.name ?? ""}</span></td>
+            <td><span class="complaint-location">${c.location ?? ""}</span></td>
+            <td><span class="complaint-lat">${c.lat ?? ""}</span></td>
+            <td><span class="complaint-lng">${c.lng ?? ""}</span></td>
+            <td><span class="complaint-ph">${c.ph ?? ""}</span></td>
+            <td><span class="complaint-tds">${c.tds ?? ""}</span></td>
+            <td><span class="complaint-issue">${c.issue ?? ""}</span></td>
+            <td><span class="complaint-description">${c.description ?? ""}</span></td>
+            <td><span class="complaint-status">${c.status ?? ""}</span></td>
+            <td>
+              <button class="edit-btn" onclick="editComplaint('${key}', this)">Edit</button>
+              <button class="delete-btn" onclick="deleteComplaint('${key}')">Delete</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      });
+    }
+    function editComplaint(key, btn) {
+      const tr = btn.closest("tr");
+      const name = tr.querySelector(".complaint-name").textContent;
+      const location = tr.querySelector(".complaint-location").textContent;
+      const lat = tr.querySelector(".complaint-lat").textContent;
+      const lng = tr.querySelector(".complaint-lng").textContent;
+      const ph = tr.querySelector(".complaint-ph").textContent;
+      const tds = tr.querySelector(".complaint-tds").textContent;
+      const issue = tr.querySelector(".complaint-issue").textContent;
+      const description = tr.querySelector(".complaint-description").textContent;
+      const status = tr.querySelector(".complaint-status").textContent;
+      tr.innerHTML = `
+        <td><input type="text" value="${name}" class="edit-name"></td>
+        <td><input type="text" value="${location}" class="edit-location"></td>
+        <td><input type="number" step="any" value="${lat}" class="edit-lat"></td>
+        <td><input type="number" step="any" value="${lng}" class="edit-lng"></td>
+        <td><input type="number" step="any" value="${ph}" class="edit-ph"></td>
+        <td><input type="number" step="any" value="${tds}" class="edit-tds"></td>
+        <td><input type="text" value="${issue}" class="edit-issue"></td>
+        <td><input type="text" value="${description}" class="edit-description"></td>
+        <td>
+          <select class="edit-status">
+            <option value="pending" ${status === "pending" ? "selected" : ""}>pending</option>
+            <option value="approved" ${status === "approved" ? "selected" : ""}>approved</option>
+            <option value="discarded" ${status === "discarded" ? "selected" : ""}>discarded</option>
+          </select>
+        </td>
+        <td>
+          <button class="save-btn" onclick="saveComplaint('${key}', this)">Save</button>
+          <button class="cancel-btn" onclick="loadComplaints()">Cancel</button>
+        </td>
+      `;
+    }
+    function saveComplaint(key, btn) {
+      const tr = btn.closest("tr");
+      const name = tr.querySelector(".edit-name").value;
+      const location = tr.querySelector(".edit-location").value;
+      const lat = parseFloat(tr.querySelector(".edit-lat").value);
+      const lng = parseFloat(tr.querySelector(".edit-lng").value);
+      const ph = tr.querySelector(".edit-ph").value ? parseFloat(tr.querySelector(".edit-ph").value) : null;
+      const tds = tr.querySelector(".edit-tds").value ? parseFloat(tr.querySelector(".edit-tds").value) : null;
+      const issue = tr.querySelector(".edit-issue").value;
+      const description = tr.querySelector(".edit-description").value;
+      const status = tr.querySelector(".edit-status").value;
+      db.ref("complaints/" + key).update({ name, location, lat, lng, ph, tds, issue, description, status });
+      loadComplaints();
+    }
+    function deleteComplaint(key) {
+      if (confirm("Delete this complaint?")) db.ref("complaints/" + key).remove();
+    }
+
+    // --- INIT ---
+    loadSensors();
+    loadReports();
+    loadComplaints();
+  </script>
+</body>
+</html>

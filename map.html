@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>pHMonitor — Water Quality Map</title>
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700;800&display=swap');
+
+    :root {
+      --glass-bg: rgba(255, 255, 255, 0.15);
+      --glass-border: rgba(255, 255, 255, 0.3);
+      --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+      --glass-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.5);
+      --accent-primary: #0369a1;
+      --accent-secondary: #0ea5e9;
+      --text-primary: #0f172a;
+      --text-secondary: #334155;
+      --bg-start: #f0f9ff;
+      --bg-mid: #bae6fd;
+      --bg-end: #38bdf8;
+      --header-bg: rgba(255, 255, 255, 0.1);
+      --header-border: rgba(255, 255, 255, 0.25);
+      --title-gradient: linear-gradient(135deg, #0c4a6e 0%, #0369a1 40%, #0ea5e9 100%);
+      --legend-bg: rgba(255, 255, 255, 0.2);
+      --legend-border: rgba(255, 255, 255, 0.4);
+      --transition-smooth: 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+      --transition-bounce: 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    [data-theme="dark"] {
+      --glass-bg: rgba(15, 23, 42, 0.3);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+      --glass-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+      --accent-primary: #38bdf8;
+      --accent-secondary: #7dd3fc;
+      --text-primary: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --bg-start: #0f172a;
+      --bg-mid: #1e293b;
+      --bg-end: #0c4a6e;
+      --header-bg: rgba(15, 23, 42, 0.35);
+      --header-border: rgba(255, 255, 255, 0.1);
+      --title-gradient: linear-gradient(135deg, #7dd3fc 0%, #38bdf8 40%, #bae6fd 100%);
+      --legend-bg: rgba(15, 23, 42, 0.4);
+      --legend-border: rgba(255, 255, 255, 0.1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background: linear-gradient(160deg, var(--bg-start) 0%, var(--bg-start) 20%, var(--bg-mid) 50%, var(--bg-mid) 80%, var(--bg-end) 100%);
+      background-attachment: fixed;
+      transition: background 0.5s ease;
+    }
+
+    /* Header overlay */
+    .header-overlay {
+      position: fixed;
+      top: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      background: var(--header-bg);
+      backdrop-filter: blur(30px) saturate(180%);
+      -webkit-backdrop-filter: blur(30px) saturate(180%);
+      border: 1px solid var(--header-border);
+      border-radius: 50px;
+      padding: 0.6rem 1.2rem 0.6rem 0.8rem;
+      box-shadow: var(--glass-shadow), var(--glass-highlight);
+      transition: all 0.5s ease;
+    }
+
+    .back-btn {
+      background: var(--glass-bg);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      border: 1px solid var(--glass-border);
+      border-radius: 50%;
+      width: 38px;
+      height: 38px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      text-decoration: none;
+      color: var(--text-primary);
+      transition: all var(--transition-smooth);
+      flex-shrink: 0;
+    }
+
+    .back-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 8px 20px rgba(14,165,233,0.2);
+    }
+
+    .header-title {
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+      background: var(--title-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .theme-toggle {
+      background: var(--glass-bg);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      border: 1px solid var(--glass-border);
+      border-radius: 50%;
+      width: 38px;
+      height: 38px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      transition: all var(--transition-smooth);
+      outline: none;
+      color: var(--text-primary);
+      flex-shrink: 0;
+    }
+
+    .theme-toggle:hover {
+      transform: scale(1.1) rotate(15deg);
+    }
+
+    .theme-toggle .icon-sun,
+    .theme-toggle .icon-moon {
+      transition: all 0.3s ease;
+      position: absolute;
+    }
+    .theme-toggle .icon-sun { opacity: 0; transform: scale(0) rotate(-90deg); }
+    .theme-toggle .icon-moon { opacity: 1; transform: scale(1) rotate(0deg); }
+    [data-theme="dark"] .theme-toggle .icon-sun { opacity: 1; transform: scale(1) rotate(0deg); }
+    [data-theme="dark"] .theme-toggle .icon-moon { opacity: 0; transform: scale(0) rotate(90deg); }
+
+    /* Map */
+    #map {
+      height: 100vh;
+      width: 100vw;
+      z-index: 1;
+    }
+
+    /* Legend */
+    .legend {
+      background: var(--legend-bg);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      padding: 12px 16px;
+      border-radius: 14px;
+      border: 1px solid var(--legend-border);
+      box-shadow: var(--glass-shadow), var(--glass-highlight);
+      font-size: 0.85rem;
+      line-height: 1.7;
+      color: var(--text-primary);
+      transition: all 0.5s ease;
+    }
+    .legend h4 {
+      margin: 0 0 8px 0;
+      font-weight: 700;
+      font-size: 0.9rem;
+      letter-spacing: 0.02em;
+      color: var(--accent-primary);
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .color-box {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      border: 1px solid var(--legend-border);
+      flex-shrink: 0;
+    }
+
+    /* Info panel */
+    .info-panel {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      background: var(--legend-bg);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid var(--legend-border);
+      border-radius: 50px;
+      padding: 0.6rem 1.5rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      box-shadow: var(--glass-shadow), var(--glass-highlight);
+      transition: all 0.5s ease;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .info-dot {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+    .info-dot span {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .info-dot span.red { background: #ef4444; }
+    .info-dot span.yellow { background: #eab308; }
+    .info-dot span.green { background: #22c55e; }
+
+    /* Sensor count badge */
+    .sensor-count {
+      position: fixed;
+      top: 6rem;
+      left: 1.5rem;
+      z-index: 1000;
+      background: var(--legend-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--legend-border);
+      border-radius: 16px;
+      padding: 0.8rem 1.2rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      box-shadow: var(--glass-shadow);
+      transition: all 0.5s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .sensor-count .count-num {
+      font-size: 1.4rem;
+      font-weight: 800;
+      background: var(--title-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    @media (max-width: 600px) {
+      .header-overlay {
+        top: 1rem;
+        padding: 0.5rem 1rem 0.5rem 0.6rem;
+        gap: 0.5rem;
+      }
+      .header-title {
+        font-size: 0.85rem;
+      }
+      .back-btn, .theme-toggle {
+        width: 34px;
+        height: 34px;
+        font-size: 0.9rem;
+      }
+      .info-panel {
+        bottom: 1rem;
+        padding: 0.5rem 1rem;
+        font-size: 0.7rem;
+        gap: 0.6rem;
+      }
+      .sensor-count {
+        top: 5rem;
+        left: 0.8rem;
+        padding: 0.6rem 1rem;
+        font-size: 0.75rem;
+        border-radius: 12px;
+      }
+      .legend {
+        padding: 8px 12px;
+        font-size: 0.75rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Map -->
+  <div id="map"></div>
+
+  <!-- Header overlay -->
+  <div class="header-overlay">
+    <a href="intro.html" class="back-btn">←</a>
+    <span class="header-title">🗺️ Water Quality Map</span>
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+      <span class="icon-sun">☀️</span>
+      <span class="icon-moon">🌙</span>
+    </button>
+  </div>
+
+  <!-- Sensor count -->
+  <div class="sensor-count" id="sensorCountBadge">
+    📡 <span class="count-num" id="sensorNum">0</span> sensors
+  </div>
+
+  <!-- Bottom info -->
+  <div class="info-panel">
+    <div class="info-dot"><span class="red"></span> Poor</div>
+    <div class="info-dot"><span class="yellow"></span> Moderate</div>
+    <div class="info-dot"><span class="green"></span> Good</div>
+    <span style="opacity:0.5;">|</span>
+    <span>Kolkata Region</span>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+  <!-- Leaflet JS + Leaflet.heat -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+
+  <script>
+    // Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyCB4O8j33O3MvstmRPDxaIRA16hBLEWszA",
+      authDomain: "phmonitor-c7b10.firebaseapp.com",
+      databaseURL: "https://phmonitor-c7b10-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "phmonitor-c7b10",
+      storageBucket: "phmonitor-c7b10.appspot.com",
+      messagingSenderId: "939761163717",
+      appId: "1:939761163717:web:0f3d2428af1359b21fbfac"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Kolkata bounds
+    const KOLKATA_CENTER = [22.5726, 88.3639];
+    const KOLKATA_BOUNDS = [[22.35, 88.15], [22.75, 88.55]];
+
+    let map;
+    let heatmapLayer;
+
+    function initMap() {
+      map = L.map('map', {
+        center: KOLKATA_CENTER,
+        zoom: 12,
+        minZoom: 10,
+        maxZoom: 18,
+        maxBounds: KOLKATA_BOUNDS,
+        maxBoundsViscosity: 1.0,
+        zoomControl: true,
+        scrollWheelZoom: true
+      });
+
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; CartoDB',
+        subdomains: 'abcd',
+        maxZoom: 19
+      }).addTo(map);
+
+      // Kolkata center marker
+      L.circleMarker(KOLKATA_CENTER, {
+        radius: 8,
+        fillColor: '#0ea5e9',
+        color: '#0369a1',
+        weight: 2,
+        opacity: 0.8,
+        fillOpacity: 0.6
+      }).addTo(map).bindPopup('<b>📍 Kolkata</b><br>Water Quality Monitoring Center');
+
+      // Area labels
+      const landmarks = [
+        { name: 'Howrah', coords: [22.5958, 88.3106] },
+        { name: 'Salt Lake', coords: [22.5834, 88.4175] },
+        { name: 'Dum Dum', coords: [22.6335, 88.4216] },
+        { name: 'Jadavpur', coords: [22.4951, 88.3714] },
+        { name: 'New Town', coords: [22.5965, 88.4675] },
+        { name: 'Park Street', coords: [22.547, 88.3552] },
+        { name: 'Esplanade', coords: [22.565, 88.35] },
+        { name: 'Behala', coords: [22.498, 88.317] }
+      ];
+
+      landmarks.forEach(place => {
+        L.circleMarker(place.coords, {
+          radius: 3,
+          fillColor: '#94a3b8',
+          color: '#64748b',
+          weight: 1,
+          opacity: 0.6,
+          fillOpacity: 0.4
+        }).addTo(map).bindTooltip(place.name, {
+          permanent: false,
+          direction: 'top'
+        });
+      });
+
+      addLegend();
+      loadSensorHeatmap();
+    }
+
+    function addLegend() {
+      const legend = L.control({ position: 'bottomright' });
+      legend.onAdd = function () {
+        const div = L.DomUtil.create('div', 'legend');
+        div.innerHTML = `
+          <h4>💧 pH Heatmap</h4>
+          <div class="legend-item">
+            <div class="color-box" style="background: #ef4444;"></div>
+            <span>Poor (Acidic / Alkaline)</span>
+          </div>
+          <div class="legend-item">
+            <div class="color-box" style="background: #eab308;"></div>
+            <span>Moderate</span>
+          </div>
+          <div class="legend-item">
+            <div class="color-box" style="background: #22c55e;"></div>
+            <span>Good (Neutral pH)</span>
+          </div>
+        `;
+        return div;
+      };
+      legend.addTo(map);
+    }
+
+    function loadSensorHeatmap() {
+      const ref = db.ref("sensors");
+      ref.once("value", snapshot => {
+        const data = snapshot.val();
+        const sensorNumEl = document.getElementById('sensorNum');
+
+        if (!data) {
+          sensorNumEl.textContent = '0';
+          return;
+        }
+
+        const heatArray = [];
+        let kolkataCount = 0;
+        const totalCount = Object.keys(data).length;
+
+        Object.entries(data).forEach(([locationKey, sensor]) => {
+          const lat = parseFloat(sensor.latitude);
+          const lng = parseFloat(sensor.longitude);
+          const pH = parseFloat(sensor.ph);
+
+          if (isNaN(lat) || isNaN(lng)) return;
+
+          // Count Kolkata area sensors
+          if (lat >= KOLKATA_BOUNDS[0][0] && lat <= KOLKATA_BOUNDS[1][0] &&
+              lng >= KOLKATA_BOUNDS[0][1] && lng <= KOLKATA_BOUNDS[1][1]) {
+            kolkataCount++;
+          }
+
+          let weight;
+          if (pH <= 7.5) {
+            weight = (pH - 4) / (7.5 - 4);
+          } else {
+            weight = (10 - pH) / (10 - 7.5);
+          }
+          weight = Math.max(0, Math.min(1, weight));
+
+          heatArray.push([lat, lng, weight]);
+        });
+
+        // Update sensor count
+        sensorNumEl.textContent = totalCount;
+
+        if (heatArray.length === 0) return;
+
+        if (heatmapLayer) {
+          map.removeLayer(heatmapLayer);
+        }
+
+        heatmapLayer = L.heatLayer(heatArray, {
+          radius: 30,
+          blur: 18,
+          maxZoom: 15,
+          max: 1.0,
+          gradient: {
+            0.0: '#ef4444',
+            0.5: '#eab308',
+            1.0: '#22c55e'
+          },
+          minOpacity: 0.25
+        }).addTo(map);
+
+        // Keep view on Kolkata - DON'T fit bounds
+        map.setView(KOLKATA_CENTER, 12);
+        
+      }).catch(err => {
+        console.error("Error loading sensor data:", err);
+      });
+    }
+
+    // Theme toggle
+    function toggleTheme() {
+      const html = document.documentElement;
+      const currentTheme = html.getAttribute('data-theme');
+      if (currentTheme === 'dark') {
+        html.removeAttribute('data-theme');
+        localStorage.setItem('theme', 'light');
+      } else {
+        html.setAttribute('data-theme', 'dark');
+        localStorage.setItem('theme', 'dark');
+      }
+    }
+
+    // Init
+    window.addEventListener('load', () => {
+      initMap();
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      if (map) map.invalidateSize();
+    });
+  </script>
+</body>
+</html>

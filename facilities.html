@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>pHMonitor — Facilities</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700;800&display=swap');
+
+    :root {
+      /* Light theme (default) */
+      --glass-bg: rgba(255, 255, 255, 0.15);
+      --glass-border: rgba(255, 255, 255, 0.3);
+      --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+      --glass-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.5);
+      --accent-primary: #0369a1;
+      --accent-secondary: #0ea5e9;
+      --text-primary: #0f172a;
+      --text-secondary: #334155;
+      --bg-start: #f0f9ff;
+      --bg-mid: #bae6fd;
+      --bg-end: #38bdf8;
+      --orb-1: rgba(56, 189, 248, 0.3);
+      --orb-2: rgba(14, 165, 233, 0.25);
+      --orb-3: rgba(255, 255, 255, 0.4);
+      --card-bg: rgba(255, 255, 255, 0.15);
+      --card-border: rgba(255, 255, 255, 0.3);
+      --card-hover-bg: rgba(255, 255, 255, 0.3);
+      --card-hover-border: rgba(255, 255, 255, 0.7);
+      --badge-bg: rgba(14, 165, 233, 0.1);
+      --badge-border: rgba(14, 165, 233, 0.2);
+      --title-gradient: linear-gradient(135deg, #0c4a6e 0%, #0369a1 40%, #0ea5e9 100%);
+      --divider-color: rgba(255, 255, 255, 0.3);
+      --transition-smooth: 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+      --transition-bounce: 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* Dark theme */
+    [data-theme="dark"] {
+      --glass-bg: rgba(15, 23, 42, 0.3);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+      --glass-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+      --accent-primary: #38bdf8;
+      --accent-secondary: #7dd3fc;
+      --text-primary: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --bg-start: #0f172a;
+      --bg-mid: #1e293b;
+      --bg-end: #0c4a6e;
+      --orb-1: rgba(56, 189, 248, 0.08);
+      --orb-2: rgba(14, 165, 233, 0.06);
+      --orb-3: rgba(255, 255, 255, 0.03);
+      --card-bg: rgba(15, 23, 42, 0.35);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-hover-bg: rgba(15, 23, 42, 0.5);
+      --card-hover-border: rgba(255, 255, 255, 0.15);
+      --badge-bg: rgba(56, 189, 248, 0.15);
+      --badge-border: rgba(56, 189, 248, 0.25);
+      --title-gradient: linear-gradient(135deg, #7dd3fc 0%, #38bdf8 40%, #bae6fd 100%);
+      --divider-color: rgba(255, 255, 255, 0.1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(160deg, var(--bg-start) 0%, var(--bg-start) 20%, var(--bg-mid) 50%, var(--bg-mid) 80%, var(--bg-end) 100%);
+      background-attachment: fixed;
+      color: var(--text-primary);
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      transition: background 0.5s ease, color 0.5s ease;
+    }
+
+    /* Ambient background orbs */
+    .bg-orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.5;
+      pointer-events: none;
+      z-index: 0;
+      animation: orbFloat 20s ease-in-out infinite;
+      transition: background 0.5s ease;
+    }
+    .bg-orb--1 {
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, var(--orb-1), transparent);
+      top: -15%;
+      right: -10%;
+      animation-delay: 0s;
+    }
+    .bg-orb--2 {
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, var(--orb-2), transparent);
+      bottom: -10%;
+      left: -5%;
+      animation-delay: -7s;
+    }
+
+    @keyframes orbFloat {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      25% { transform: translate(30px, -20px) scale(1.05); }
+      50% { transform: translate(-15px, 15px) scale(0.95); }
+      75% { transform: translate(-25px, -15px) scale(1.02); }
+    }
+
+    /* Theme toggle */
+    .theme-toggle {
+      position: fixed;
+      top: 2rem;
+      right: 2rem;
+      z-index: 1000;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid var(--glass-border);
+      border-radius: 50%;
+      width: 52px;
+      height: 52px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      box-shadow: var(--glass-shadow), var(--glass-highlight);
+      transition: all var(--transition-smooth);
+      outline: none;
+      color: var(--text-primary);
+    }
+
+    .theme-toggle:hover {
+      transform: scale(1.1) rotate(15deg);
+      box-shadow: 0 12px 40px 0 rgba(14, 165, 233, 0.3), var(--glass-highlight);
+      border-color: var(--card-hover-border);
+    }
+
+    .theme-toggle .icon-sun,
+    .theme-toggle .icon-moon {
+      transition: all 0.3s ease;
+      position: absolute;
+    }
+
+    .theme-toggle .icon-sun {
+      opacity: 0;
+      transform: scale(0) rotate(-90deg);
+    }
+
+    .theme-toggle .icon-moon {
+      opacity: 1;
+      transform: scale(1) rotate(0deg);
+    }
+
+    [data-theme="dark"] .theme-toggle .icon-sun {
+      opacity: 1;
+      transform: scale(1) rotate(0deg);
+    }
+
+    [data-theme="dark"] .theme-toggle .icon-moon {
+      opacity: 0;
+      transform: scale(0) rotate(90deg);
+    }
+
+    /* Back button */
+    .back-btn {
+      position: fixed;
+      top: 2rem;
+      left: 2rem;
+      z-index: 1000;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid var(--glass-border);
+      border-radius: 50%;
+      width: 52px;
+      height: 52px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      box-shadow: var(--glass-shadow), var(--glass-highlight);
+      transition: all var(--transition-smooth);
+      outline: none;
+      color: var(--text-primary);
+      text-decoration: none;
+    }
+
+    .back-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 12px 40px 0 rgba(14, 165, 233, 0.3), var(--glass-highlight);
+      border-color: var(--card-hover-border);
+    }
+
+    /* Main container */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 5rem 2rem 3rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header */
+    .page-header {
+      text-align: center;
+      margin-bottom: 4rem;
+      animation: fadeInUp 0.8s ease-out;
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .page-eyebrow {
+      display: inline-block;
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.25em;
+      color: var(--accent-primary);
+      margin-bottom: 1.5rem;
+      padding: 0.5rem 1.5rem;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 100px;
+      border: 1px solid var(--glass-border);
+      transition: all 0.5s ease;
+    }
+
+    .page-title {
+      font-size: clamp(2.5rem, 5vw, 4rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 1.5rem;
+      background: var(--title-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      transition: all 0.5s ease;
+    }
+
+    .page-subtitle {
+      font-size: 1.2rem;
+      max-width: 600px;
+      margin: 0 auto;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      transition: color 0.5s ease;
+    }
+
+    /* Facilities grid */
+    .facilities-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 1.8rem;
+      margin-top: 2rem;
+    }
+
+    /* Facility card */
+    .facility-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid var(--card-border);
+      border-radius: 28px;
+      padding: 2rem 2.2rem;
+      box-shadow: var(--glass-shadow), var(--glass-highlight);
+      transition: all var(--transition-smooth);
+      position: relative;
+      overflow: hidden;
+      animation: fadeInUp 0.6s ease-out both;
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+
+    .facility-card:nth-child(1) { animation-delay: 0.1s; }
+    .facility-card:nth-child(2) { animation-delay: 0.2s; }
+    .facility-card:nth-child(3) { animation-delay: 0.3s; }
+    .facility-card:nth-child(4) { animation-delay: 0.4s; }
+    .facility-card:nth-child(5) { animation-delay: 0.5s; }
+    .facility-card:nth-child(6) { animation-delay: 0.6s; }
+
+    /* Card shimmer */
+    .facility-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.2) 50%,
+        transparent 100%
+      );
+      transition: left 0.7s ease;
+      pointer-events: none;
+    }
+
+    .facility-card:hover::after {
+      left: 100%;
+    }
+
+    /* Card accent line */
+    .facility-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0%;
+      height: 4px;
+      background: linear-gradient(90deg, transparent, var(--accent-secondary), transparent);
+      border-radius: 0 0 4px 4px;
+      opacity: 0;
+      transition: all var(--transition-bounce);
+    }
+
+    .facility-card:hover::before {
+      opacity: 1;
+      width: 50%;
+    }
+
+    .facility-card:hover {
+      background: var(--card-hover-bg);
+      backdrop-filter: blur(40px) saturate(200%);
+      -webkit-backdrop-filter: blur(40px) saturate(200%);
+      border-color: var(--card-hover-border);
+      box-shadow: 
+        0 20px 60px 0 rgba(14, 165, 233, 0.25),
+        0 4px 12px 0 rgba(14, 165, 233, 0.1),
+        var(--glass-highlight);
+      transform: translateY(-8px) scale(1.02);
+      z-index: 5;
+    }
+
+    .card-icon-wrapper {
+      width: 56px;
+      height: 56px;
+      border-radius: 18px;
+      background: var(--badge-bg);
+      border: 1px solid var(--badge-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      flex-shrink: 0;
+      transition: all var(--transition-bounce);
+    }
+
+    .facility-card:hover .card-icon-wrapper {
+      transform: scale(1.15) rotate(-5deg);
+      background: rgba(14, 165, 233, 0.2);
+    }
+
+    .card-body {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .card-badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent-secondary);
+      background: var(--badge-bg);
+      padding: 0.3rem 0.8rem;
+      border-radius: 100px;
+      border: 1px solid var(--badge-border);
+      align-self: flex-start;
+      transition: all 0.5s ease;
+    }
+
+    .card-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      color: var(--text-primary);
+      transition: color var(--transition-smooth);
+      line-height: 1.4;
+    }
+
+    .facility-card:hover .card-title {
+      color: var(--accent-primary);
+    }
+
+    .card-description {
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      transition: color 0.5s ease;
+    }
+
+    /* Stats section */
+    .stats-section {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin-top: 4rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 2rem 1.5rem;
+      text-align: center;
+      box-shadow: var(--glass-shadow), var(--glass-highlight);
+      transition: all var(--transition-smooth);
+    }
+
+    .stat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 16px 40px 0 rgba(14, 165, 233, 0.2), var(--glass-highlight);
+    }
+
+    .stat-number {
+      font-size: 2.5rem;
+      font-weight: 800;
+      background: var(--title-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: color 0.5s ease;
+    }
+
+    /* Footer */
+    .page-footer {
+      text-align: center;
+      margin-top: 3rem;
+      padding: 2rem;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      transition: color 0.5s ease;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .container {
+        padding: 4rem 1.5rem 2rem;
+      }
+      .facilities-grid {
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.2rem;
+      }
+      .facility-card {
+        padding: 1.5rem;
+        border-radius: 24px;
+      }
+      .theme-toggle,
+      .back-btn {
+        top: 1.5rem;
+        width: 45px;
+        height: 45px;
+        font-size: 1.2rem;
+      }
+      .back-btn {
+        left: 1.5rem;
+      }
+      .theme-toggle {
+        right: 1.5rem;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .container {
+        padding: 3.5rem 1rem 1.5rem;
+      }
+      .page-title {
+        font-size: 2rem;
+      }
+      .page-subtitle {
+        font-size: 1rem;
+      }
+      .facilities-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+      .facility-card {
+        padding: 1.3rem;
+        border-radius: 20px;
+      }
+      .card-icon-wrapper {
+        width: 46px;
+        height: 46px;
+        font-size: 1.5rem;
+        border-radius: 14px;
+      }
+      .card-title {
+        font-size: 1.05rem;
+      }
+      .card-description {
+        font-size: 0.9rem;
+      }
+      .stats-section {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+      }
+      .stat-card {
+        padding: 1.5rem 1rem;
+      }
+      .stat-number {
+        font-size: 2rem;
+      }
+      .theme-toggle,
+      .back-btn {
+        top: 1rem;
+        width: 40px;
+        height: 40px;
+        font-size: 1.1rem;
+      }
+      .back-btn {
+        left: 1rem;
+      }
+      .theme-toggle {
+        right: 1rem;
+      }
+    }
+
+    @media (max-width: 380px) {
+      .container {
+        padding: 3rem 0.5rem 1rem;
+      }
+      .page-title {
+        font-size: 1.6rem;
+      }
+      .facility-card {
+        padding: 1rem;
+      }
+      .stats-section {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Ambient background elements -->
+  <div class="bg-orb bg-orb--1"></div>
+  <div class="bg-orb bg-orb--2"></div>
+
+  <!-- Back button -->
+  <a href="index.html" class="back-btn" aria-label="Go back">←</a>
+
+  <!-- Theme Toggle Button -->
+  <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+    <span class="icon-sun">☀️</span>
+    <span class="icon-moon">🌙</span>
+  </button>
+
+  <!-- Main content -->
+  <div class="container">
+    <header class="page-header">
+      <span class="page-eyebrow">💧 Our Capabilities</span>
+      <h1 class="page-title">Smart Facilities</h1>
+      <p class="page-subtitle">
+        Empowering communities with cutting-edge water quality monitoring infrastructure and intelligent reporting systems.
+      </p>
+    </header>
+
+    <!-- Stats -->
+    <div class="stats-section">
+      <div class="stat-card">
+        <div class="stat-number">24/7</div>
+        <div class="stat-label">Real-time Monitoring</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">IoT</div>
+        <div class="stat-label">Sensor Network</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">GPS</div>
+        <div class="stat-label">Location Tracking</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">🔒</div>
+        <div class="stat-label">Secure System</div>
+      </div>
+    </div>
+
+    <!-- Facilities Grid -->
+    <div class="facilities-grid">
+      <div class="facility-card">
+        <div class="card-icon-wrapper">📍</div>
+        <div class="card-body">
+          <span class="card-badge">GPS Enabled</span>
+          <h2 class="card-title">Real-time Location-based Reporting</h2>
+          <p class="card-description">
+            Public users can report suspected bad water quality directly from their location using GPS. Reports are logged for admin review.
+          </p>
+        </div>
+      </div>
+
+      <div class="facility-card">
+        <div class="card-icon-wrapper">📊</div>
+        <div class="card-body">
+          <span class="card-badge">Live Data</span>
+          <h2 class="card-title">Sensor Data Monitoring</h2>
+          <p class="card-description">
+            pH and TDS levels are monitored by IoT-enabled ESP32 devices and logged to the system in real-time.
+          </p>
+        </div>
+      </div>
+
+      <div class="facility-card">
+        <div class="card-icon-wrapper">🗺️</div>
+        <div class="card-body">
+          <span class="card-badge">Visual</span>
+          <h2 class="card-title">Heatmap Visualization</h2>
+          <p class="card-description">
+            View a color-coded map showing water quality across locations, ranging from green (safe) to red (hazardous).
+          </p>
+        </div>
+      </div>
+
+      <div class="facility-card">
+        <div class="card-icon-wrapper">🔒</div>
+        <div class="card-body">
+          <span class="card-badge">Admin Only</span>
+          <h2 class="card-title">Secure Admin Panel</h2>
+          <p class="card-description">
+            Only verified admins can log in and manage reported issues, verify locations, and remove outdated or incorrect reports.
+          </p>
+        </div>
+      </div>
+
+      <div class="facility-card">
+        <div class="card-icon-wrapper">⚠️</div>
+        <div class="card-body">
+          <span class="card-badge">Health</span>
+          <h2 class="card-title">Health Risk Awareness</h2>
+          <p class="card-description">
+            Clicking on affected locations gives users information about possible health risks due to water contamination.
+          </p>
+        </div>
+      </div>
+
+      <div class="facility-card">
+        <div class="card-icon-wrapper">🧪</div>
+        <div class="card-body">
+          <span class="card-badge">Verification</span>
+          <h2 class="card-title">Manual Verification</h2>
+          <p class="card-description">
+            Admins can manually verify the public reports using portable sensors and update the map accordingly.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <footer class="page-footer">
+      pHMonitor — Smart Water Quality Monitoring System
+    </footer>
+  </div>
+
+  <script>
+    // Theme toggle functionality
+    function toggleTheme() {
+      const html = document.documentElement;
+      const currentTheme = html.getAttribute('data-theme');
+      
+      if (currentTheme === 'dark') {
+        html.removeAttribute('data-theme');
+        localStorage.setItem('theme', 'light');
+      } else {
+        html.setAttribute('data-theme', 'dark');
+        localStorage.setItem('theme', 'dark');
+      }
+    }
+
+    // Load saved theme preference
+    (function() {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script>
+</body>
+</html>

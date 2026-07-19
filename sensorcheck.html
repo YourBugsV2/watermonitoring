@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Add Sensor Data</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-database-compat.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f6fbff;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    h1 {
+      color: #0077b6;
+      margin-top: 2rem;
+    }
+    form {
+      background: #fff;
+      padding: 2rem 2.5rem;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px #b5e3f766;
+      margin-top: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+      min-width: 320px;
+      max-width: 400px;
+    }
+    label {
+      font-weight: 600;
+      color: #1a2233;
+    }
+    input {
+      padding: 0.7rem;
+      border-radius: 8px;
+      border: 1.5px solid #b5e3f7;
+      font-size: 1rem;
+    }
+    button {
+      background: linear-gradient(90deg, #0077b6 30%, #48cae4 70%);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 0.9rem 1.5rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: linear-gradient(90deg, #48cae4 10%, #0077b6 90%);
+    }
+    .status {
+      margin-top: 1rem;
+      font-weight: 600;
+      color: #00796b;
+    }
+  </style>
+</head>
+<body>
+  <h1>Add Sensor Data</h1>
+  <form id="sensorForm">
+    <label>
+      Latitude:
+      <input type="number" step="any" name="latitude" required>
+    </label>
+    <label>
+      Longitude:
+      <input type="number" step="any" name="longitude" required>
+    </label>
+    <label>
+      pH Value:
+      <input type="number" step="any" name="ph" min="0" max="14" required>
+    </label>
+    <label>
+      TDS (ppm):
+      <input type="number" step="any" name="tds">
+    </label>
+    <button type="submit">Add Sensor</button>
+    <div class="status" id="status"></div>
+  </form>
+  <script>
+    // Initialize Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyCB4O8j33O3MvstmRPDxaIRA16hBLEWszA",
+      authDomain: "phmonitor-c7b10.firebaseapp.com",
+      databaseURL: "https://phmonitor-c7b10-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "phmonitor-c7b10"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    document.getElementById('sensorForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const form = e.target;
+      const latitude = parseFloat(form.latitude.value);
+      const longitude = parseFloat(form.longitude.value);
+      const ph = parseFloat(form.ph.value);
+      const tds = form.tds.value ? parseFloat(form.tds.value) : null;
+
+      if (isNaN(latitude) || isNaN(longitude) || isNaN(ph)) {
+        document.getElementById('status').textContent = "Please enter valid numbers for all required fields.";
+        return;
+      }
+
+      const sensor = { latitude, longitude, ph };
+      if (tds !== null) sensor.tds = tds;
+
+      db.ref("sensors").push(sensor)
+        .then(() => {
+          document.getElementById('status').textContent = "✅ Sensor data added!";
+          form.reset();
+        })
+        .catch(() => {
+          document.getElementById('status').textContent = "❌ Failed to add sensor data.";
+        });
+    });
+  </script>
+</body>
+</html>
